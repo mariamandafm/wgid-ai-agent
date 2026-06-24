@@ -1,0 +1,16 @@
+{
+  "name": "api-server",
+  "version": "1.0.0",
+  "description": "API (Express) com ferramentas de pesquisa científica protegidas por OAuth 2.0 Token Exchange (RFC 8693) delegado via Keycloak",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "jose": "^5.9.6",
+    "dotenv": "^16.4.5"
+  }
+}

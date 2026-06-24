@@ -1,0 +1,56 @@
+services:
+
+  agent:
+    build:
+      context: ./agent
+    container_name: agent
+    env_file:
+      - ./agent/.env
+    ports:
+      - "4111:4111"
+
+  portal:
+    build:
+      context: ./portal
+    container_name: portal
+    env_file:
+      - ./portal/.env
+    environment:
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - keycloak
+
+  api_server:
+    build:
+      context: ./api_server
+    container_name: api_server
+    env_file:
+      - ./api_server/.env
+    environment:
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+    ports:
+      - "3001:3001"
+    depends_on:
+      - keycloak
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.5
+    container_name: keycloak
+    command: start-dev --features=token-exchange
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8080
+      KC_HOSTNAME_STRICT: false
+    ports:
+      - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+ 
+volumes:
+  keycloak_data:
+ 

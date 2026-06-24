@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor User as Usuário
+    participant App as Initial Client<br/>(Ex: Frontend)
+    participant API1 as Requester Client<br/>(Ex: API Intermediária)
+    participant KC as Keycloak<br/>(Auth Server)
+    participant API2 as Target Client<br/>(Ex: API de Destino)
+
+    %% Autenticação Original
+    User->>App: Acessa o sistema / Faz Login
+    App->>KC: Fluxo OIDC padrão (Ex: Authorization Code)
+    KC-->>App: Emite o Token Original (Token A)
+    
+    %% Primeira chamada de API
+    App->>API1: Requisição enviando o Token A no cabeçalho
+    
+    %% Início do Token Exchange
+    rect lightblue
+    Note over API1, KC: Fluxo de Token Exchange (RFC 8693)
+    API1->>KC: POST /token<br/>grant_type=token-exchange<br/>subject_token=Token A<br/>audience=target-client
+    KC->>KC: Valida Token A<br/>Checa Permissões / Client Policies
+    KC-->>API1: Emite o Novo Token (Token B)<br/>(Downscoped para a API 2)
+    end
+    
+    %% Chamada para o serviço de destino
+    API1->>API2: Requisição enviando o Token B no cabeçalho
+    API2->>API2: Valida o Token B
+    API2-->>API1: Retorna a resposta da operação
+    
+    %% Retorno final
+    API1-->>App: Retorna os dados processados

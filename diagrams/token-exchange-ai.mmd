@@ -1,0 +1,64 @@
+sequenceDiagram
+    actor P as Pesquisadora
+    participant Portal as Portal de Delegação
+    participant KC as Keycloak AS<br/>(realm: agents)
+    participant Shib as Shibboleth IdP<br/>(CAFe / GIdLab)
+    participant SATOSA as SATOSA Proxy<br/>(SAML → OIDC)
+    participant Agente as Agente de IA<br/>(wgid-agent-v1)
+    participant API as API<br/>(recurso protegido, api_server)
+
+    Note over P,API: FASE 1 — Autenticação federada da pesquisadora
+
+    P->>Portal: Acessa o portal e clica<br/>"Entrar com conta institucional"
+    Portal->>KC: Authorization Request<br/>(client_id=portal-delegacao)
+    KC->>SATOSA: Redireciona para IdP federado
+    SATOSA->>Shib: AuthnRequest SAML
+    Shib->>P: Tela de login institucional
+    P->>Shib: Credenciais (login + senha)
+    Shib->>SATOSA: Asserção SAML<br/>eduPersonEntitlement:<br/>urn:mace:aarc:group:vo.genomica.br:role=pesquisador
+    SATOSA->>KC: Token OIDC<br/>sub=ana@ufrn.br<br/>eduperson_entitlement=[urn:mace:aarc:...]
+    KC->>Portal: Authorization Code
+    Portal->>KC: Token Request (code)
+    KC->>Portal: token_pesquisadora<br/>(sub=ana@ufrn.br)
+
+    Note over P,API: FASE 2 — Autenticação do agente (identidade própria)
+
+    Agente->>KC: POST /token<br/>grant_type=client_credentials<br/>client_id=wgid-agent-v1<br/>client_secret=***
+    KC->>Agente: token_agente<br/>(sub=wgid-agent-v1)
+
+    Note over P,API: FASE 3 — Consentimento e delegação (RFC 8693 Token Exchange)
+
+    Portal->>P: Tela de consentimento:<br/>"Autorizar wgid-agent-v1 a agir<br/>em seu nome com genomica:read<br/>e hpc:submit?"
+    P->>Portal: Clica "Autorizar"
+
+    Portal->>KC: POST /token [RFC 8693]<br/>grant_type=token-exchange<br/>subject_token=token_pesquisadora<br/>subject_token_type=access_token<br/>actor_token=token_agente<br/>actor_token_type=access_token<br/>scope=genomica:read hpc:submit
+
+    Note over KC: Keycloak valida:<br/>1. subject_token válido ✓<br/>2. actor_token válido ✓<br/>3. scope ⊆ permissões da pesquisadora ✓<br/>4. Standard Token Exchange habilitado ✓
+
+    KC->>Portal: token_delegado (JWT)<br/>sub=ana@ufrn.br ← quem autorizou<br/>act.sub=wgid-agent-v1 ← quem age<br/>scope=genomica:read hpc:submit<br/>eduperson_entitlement=[urn:mace:aarc:...]
+
+    Portal->>Agente: Entrega token_delegado<br/>(via variável de ambiente segura)
+
+    Note over P,API: FASE 4 — Agente acessa recurso em nome da pesquisadora
+
+    Agente->>Agente: Decodifica JWT localmente:<br/>• sub=ana@ufrn.br ✓<br/>• act.sub=wgid-agent-v1 ✓<br/>• scope contém genomica:read ✓<br/>• token não expirado ✓
+
+    Agente->>API: GET /api/datasets/DS-2026-03/sequences<br/>Authorization: Bearer {token_delegado}
+
+    API->>KC: GET /realms/agents/.well-known/jwks<br/>(apenas na 1ª vez — resultado em cache)
+    KC->>API: Chaves públicas JWKS
+
+    API->>API: Valida JWT localmente:<br/>• assinatura RSA ✓<br/>• exp não expirado ✓<br/>• aud=api_server ✓<br/>• scope ⊇ genomica:read ✓<br/>• act claim presente ✓
+
+    API->>API: Grava audit event:<br/>user=ana@ufrn.br<br/>agent=wgid-agent-v1<br/>action=genomica:read<br/>resource=DS-2026-03<br/>entitlement=urn:mace:aarc:...
+
+    API->>Agente: HTTP 200 OK<br/>{"sequences": [...847 registros...]}
+
+    Agente->>P: "Encontrei 847 sequências.<br/>Submetendo job de análise..."
+
+    Note over P,API: FASE 5 — Agente tenta ação fora do escopo (bloqueio)
+
+    Agente->>API: POST /api/datasets/DS-2026-03/export<br/>Authorization: Bearer {token_delegado}
+    API->>API: Verifica scope:<br/>genomica:export NÃO presente ✗
+    API->>Agente: HTTP 403 Forbidden<br/>{"error": "scope genomica:export ausente"}
+    Agente->>P: "Não tenho permissão para exportar.<br/>Acesse o portal para ajustar as permissões."

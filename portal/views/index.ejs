@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portal de Delegação</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7;
+      color: #1f2328;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: #57606a; margin-bottom: 28px; }
+    .card {
+      background: #ffffff;
+      border: 1px solid #d8dee4;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .card h2 { margin: 0 0 4px; font-size: 17px; }
+    .card .desc { color: #57606a; font-size: 14px; margin-bottom: 14px; }
+    .scopes-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    .label { font-size: 12px; font-weight: 600; color: #57606a; margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .badge.allow { background: #dafbe1; color: #1a7f37; border: 1px solid #aceebb; }
+    .badge.block { background: #ffebe9; color: #cf222e; border: 1px solid #ffc1bc; }
+    .btn {
+      display: inline-block;
+      background: #1f2328;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn:hover { background: #32383f; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Portal de Delegação</h1>
+    <p class="subtitle">Autorize agentes de IA a agirem em seu nome usando OAuth 2.0 Token Exchange (RFC 8693).</p>
+
+    <% agents.forEach(agent => { %>
+      <div class="card">
+        <h2><%= agent.name %></h2>
+        <div class="desc"><%= agent.description %></div>
+
+        <div class="label">Pode fazer</div>
+        <div class="scopes-row">
+          <% agent.allowedScopes.forEach(scope => { %>
+            <span class="badge allow"><%= scope %></span>
+          <% }) %>
+        </div>
+
+        <div class="label">Não pode fazer</div>
+        <div class="scopes-row">
+          <% agent.blockedScopes.forEach(scope => { %>
+            <span class="badge block"><%= scope %></span>
+          <% }) %>
+        </div>
+
+        <a class="btn" href="/login">Autorizar assistente</a>
+      </div>
+    <% }) %>
+  </div>
+</body>
+</html>

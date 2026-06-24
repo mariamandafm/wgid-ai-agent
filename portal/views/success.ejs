@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Delegação autorizada</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7;
+      color: #1f2328;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .ok { color: #1a7f37; font-weight: 600; }
+    .subtitle { color: #57606a; margin-bottom: 24px; }
+    .card {
+      background: #ffffff;
+      border: 1px solid #d8dee4;
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+    }
+    .label { font-size: 12px; font-weight: 600; color: #57606a; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #eaeef2;
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .note {
+      background: #fff8c5;
+      border: 1px solid #eac54f;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #4d3800;
+    }
+    .btn {
+      display: inline-block;
+      background: #1f2328;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .btn:hover { background: #32383f; }
+    .btn.secondary { background: #fff; color: #1f2328; border: 1px solid #d8dee4; }
+    .btn.secondary:hover { background: #f6f8fa; }
+    .copy-row { display: flex; gap: 8px; align-items: flex-start; }
+    .copy-row pre { flex: 1; margin: 0; white-space: pre-wrap; word-break: break-all; }
+    .copy-row .btn { white-space: nowrap; }
+    .hint { font-size: 12px; color: #57606a; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Delegação autorizada <span class="ok">&check;</span></h1>
+    <p class="subtitle"><%= agent.name %> agora pode atuar em seu nome.</p>
+
+    <div class="card">
+      <div class="label">Token delegado — pronto para o agente</div>
+      <div class="copy-row">
+        <pre id="env-line">DELEGATED_TOKEN=<%= token %></pre>
+        <button class="btn secondary" type="button" onclick="copyToken()">Copiar</button>
+      </div>
+      <p class="hint">
+        Cole essa linha em <code>agent/.env</code> (substituindo o valor atual
+        de <code>DELEGATED_TOKEN</code>) e reinicie o agente para que ele
+        passe a usar este token delegado.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="label">Payload do token delegado (decodificado)</div>
+      <pre><%= JSON.stringify(payload, null, 2) %></pre>
+    </div>
+
+    <div class="note">
+      <strong>Observação:</strong> o Keycloak 26.2 ainda não implementa o
+      "delegation mode" do RFC 8693, então este token não contém o claim
+      <code>act</code> (que identificaria o agente como ator agindo em nome
+      do subject). Quando o Keycloak suportar isso, o claim apareceria aqui
+      como <code>act: { sub: "wgid-agent-v1" }</code>.
+    </div>
+
+    <p><a class="btn" href="/delegations">Ver delegações ativas</a></p>
+  </div>
+
+  <script>
+    function copyToken() {
+      const text = document.getElementById('env-line').innerText;
+      navigator.clipboard.writeText(text);
+    }
+  </script>
+</body>
+</html>
