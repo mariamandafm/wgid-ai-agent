@@ -1,6 +1,5 @@
 # PoC: Delegação de Identidade Federada para Agentes de IA via RFC 8693
 
-**Contexto:** GIdLab / RNP — CAFe Expresso  
 **Objetivo:** Demonstrar que permissões federadas de um usuário, expressas como entitlements AARC-G069 e transportadas via SAML, podem ser delegadas a agentes de IA com escopo reduzido e cadeia de delegação rastreável, usando o Token Exchange do OAuth 2.0 (RFC 8693), sem modificar o protocolo SAML nem a infraestrutura da federação.
 
 ---
