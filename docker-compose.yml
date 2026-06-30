@@ -50,6 +50,18 @@ services:
       - "8080:8080"
     volumes:
       - keycloak_data:/opt/keycloak/data
+
+  satosa:
+    container_name: satosa
+    image: satosa:8.5.1
+    restart: always
+    ports:
+      - 443:3443
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh", "--bind", "0.0.0.0:3443", "--certfile", "/etc/satosa/https.crt", "--keyfile", "/etc/satosa/https.key", "satosa.wsgi:app"]
+    env_file:
+      - ./satosa/.satosa_env
+    volumes:
+      - ./satosa/volumes:/etc/satosa
  
 volumes:
   keycloak_data:

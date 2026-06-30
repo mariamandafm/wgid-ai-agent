@@ -1,0 +1,61 @@
+attributes:
+  address:
+    openid: [address.street_address]
+    orcid: [addresses.str]
+    saml: [postaladdress]
+  displayName:
+    openid: [nickname]
+    orcid: [name.credit-name]
+    github: [login]
+    saml: [displayName]
+  eduPersonTargetedID:
+    facebook: [id]
+    linkedin: [id]
+    orcid: [orcid]
+    github: [id]
+    openid: [sub]
+    saml: [eduPersonTargetedID, ePTID, eptid]
+  eduPersonPrincipalName:
+    facebook: [id]
+    linkedin: [id]
+    orcid: [orcid]
+    github: [id]
+    openid: [sub]
+    saml: [eduPersonPrincipalName, ePPN, eppn]
+  givenName:
+    facebook: [first_name]
+    linkedin: [email-address]
+    orcid: [name.given-names.value]
+    openid: [given_name]
+    saml: [givenName, gn]
+  mail:
+    facebook: [email]
+    linkedin: [email-address]
+    orcid: [emails.str]
+    github: [email]
+    openid: [email]
+    saml: [email, emailAdress, mail]
+  cn:
+    facebook: [name]
+    orcid: [name.credit-name]
+    github: [name]
+    openid: [name]
+    saml: [cn, commonName]
+  surName:
+    facebook: [last_name]
+    linkedin: [lastName]
+    orcid: [name.family-name.value]
+    openid: [family_name]
+    saml: [sn, surName]
+  brEduAffiliationType:
+    saml: [brEduAffiliationType, braff]
+  eduPersonAffiliation:
+    saml: [eduPersonAffiliation, ePA]
+  eduPersonEntitlement:
+    saml: [eduPersonEntitlement, ePE]
+  brPersonCPF:
+    saml: [brPersonCPF, brpersoncpf]
+  schacDateOfBirth:
+    saml: [schacDateOfBirth]
+user_id_from_attrs: [eduPersonTargetedID]
+user_id_to_attr: eduPersonTargetedID

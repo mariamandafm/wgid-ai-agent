@@ -1,0 +1,16 @@
+BASE: https://localhost:443
+COOKIE_STATE_NAME: SATOSA_STATE
+CONTEXT_STATE_DELETE: 'yes'
+STATE_ENCRYPTION_KEY: changeme6mM3IEbaasJ7dypVsw4WN
+cookies_samesite_compat:
+  - ["SATOSA_STATE", "SATOSA_STATE_LEGACY"]
+INTERNAL_ATTRIBUTES: internal_attributes.yaml
+MICRO_SERVICES:
+  - plugins/microservices/static_attributes.yaml
+#  - plugins/microservices/requester_based_routing.yaml
+BACKEND_MODULES:
+  - plugins/backends/saml2_backend.yaml
+FRONTEND_MODULES:
+  - plugins/frontends/saml2_frontend.yaml
+
+
