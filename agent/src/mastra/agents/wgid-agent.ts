@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
-import { buscarSequencias } from '../tools/wgid-tool';
+import { buscarSequencias, submeterJob } from '../tools/wgid-tool';
 
 export const wgidAgent = new Agent({
   id: 'wgid-agent',
@@ -9,7 +9,7 @@ export const wgidAgent = new Agent({
     da federação CAFe. Use as ferramentas disponíveis para buscar sequências
     e submeter jobs de análise. Sempre confirme as ações antes de executá-las.`,
   model: 'google/gemini-2.5-flash',
-  tools: { buscarSequencias },
+  tools: { buscarSequencias, submeterJob },
 //   scorers: {
 //     toolCallAppropriateness: {
 //       scorer: scorers.toolCallAppropriatenessScorer,

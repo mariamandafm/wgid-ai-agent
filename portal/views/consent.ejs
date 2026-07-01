@@ -22,19 +22,31 @@
       padding: 24px 28px;
     }
     .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eaeef2; }
-    .row:last-child { border-bottom: none; }
     .row .k { color: #57606a; font-size: 14px; }
     .row .v { font-weight: 600; font-size: 14px; text-align: right; }
-    .label { font-size: 12px; font-weight: 600; color: #57606a; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.03em; }
-    .scopes-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .badge.allow {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: #dafbe1; color: #1a7f37; border: 1px solid #aceebb;
+    .label { font-size: 12px; font-weight: 600; color: #57606a; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .scope-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid #d8dee4;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
     }
+    .scope-item:hover { background: #f6f8fa; }
+    .scope-item input[type="checkbox"] {
+      margin-top: 3px;
+      width: 16px;
+      height: 16px;
+      accent-color: #1a7f37;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .scope-info { display: flex; flex-direction: column; gap: 2px; }
+    .scope-label { font-weight: 600; font-size: 14px; color: #1f2328; }
+    .scope-desc { font-size: 13px; color: #57606a; }
     .actions { margin-top: 24px; display: flex; gap: 10px; }
     .btn {
       flex: 1;
@@ -45,6 +57,7 @@
       font-weight: 600;
       cursor: pointer;
       border: none;
+      text-decoration: none;
     }
     .btn.primary { background: #1f2328; color: #fff; }
     .btn.primary:hover { background: #32383f; }
@@ -54,22 +67,31 @@
 <body>
   <div class="container">
     <h1>Confirmar delegação</h1>
-    <p class="subtitle">Revise o que o agente poderá fazer em seu nome antes de autorizar.</p>
+    <p class="subtitle">Selecione o que o agente poderá fazer em seu nome e confirme a autorização.</p>
 
     <div class="card">
       <div class="row"><span class="k">Agente</span><span class="v"><%= agent.name %></span></div>
       <div class="row"><span class="k">Validade</span><span class="v"><%= validityDays %> dias</span></div>
 
-      <div class="label">Escopos delegados</div>
-      <div class="scopes-row">
-        <% agent.allowedScopes.forEach(scope => { %>
-          <span class="badge allow"><%= scope %></span>
-        <% }) %>
-      </div>
+      <form method="POST" action="/authorize">
+        <input type="hidden" name="agentId" value="<%= agent.id %>">
 
-      <form method="POST" action="/authorize" class="actions">
-        <a class="btn secondary" href="/">Cancelar</a>
-        <button class="btn primary" type="submit">Confirmar delegação</button>
+        <div class="label">Escopos a delegar</div>
+
+        <% agent.requestedScopes.forEach(scope => { %>
+          <label class="scope-item">
+            <input type="checkbox" name="scopes" value="<%= scope.name %>" checked>
+            <div class="scope-info">
+              <span class="scope-label"><%= scope.label %></span>
+              <span class="scope-desc"><%= scope.description %></span>
+            </div>
+          </label>
+        <% }); %>
+
+        <div class="actions">
+          <a class="btn secondary" href="/">Cancelar</a>
+          <button class="btn primary" type="submit">Confirmar delegação</button>
+        </div>
       </form>
     </div>
   </div>

@@ -32,9 +32,10 @@
       font-weight: 600;
       padding: 3px 10px;
       border-radius: 999px;
+      background: #dafbe1;
+      color: #1a7f37;
+      border: 1px solid #aceebb;
     }
-    .badge.allow { background: #dafbe1; color: #1a7f37; border: 1px solid #aceebb; }
-    .badge.block { background: #ffebe9; color: #cf222e; border: 1px solid #ffc1bc; }
     .btn {
       display: inline-block;
       background: #1f2328;
@@ -61,21 +62,14 @@
         <h2><%= agent.name %></h2>
         <div class="desc"><%= agent.description %></div>
 
-        <div class="label">Pode fazer</div>
+        <div class="label">Pode solicitar</div>
         <div class="scopes-row">
-          <% agent.allowedScopes.forEach(scope => { %>
-            <span class="badge allow"><%= scope %></span>
+          <% agent.requestedScopes.forEach(scope => { %>
+            <span class="badge"><%= scope.label %></span>
           <% }) %>
         </div>
 
-        <div class="label">Não pode fazer</div>
-        <div class="scopes-row">
-          <% agent.blockedScopes.forEach(scope => { %>
-            <span class="badge block"><%= scope %></span>
-          <% }) %>
-        </div>
-
-        <a class="btn" href="/login">Autorizar assistente</a>
+        <a class="btn" href="/consent/<%= agent.id %>">Autorizar assistente</a>
       </div>
     <% }) %>
   </div>

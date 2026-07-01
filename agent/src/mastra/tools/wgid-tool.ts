@@ -22,24 +22,24 @@ export const buscarSequencias = createTool({
   }
 })
 
-// export const submeterJob = createTool({
-//   id: 'submeter-job',
-//   description: 'Submete job de análise no cluster HPC',
-//   inputSchema: z.object({
-//     parametros: z.record(z.unknown())
-//   }),
-//   execute: async (inputData) => {
-//     const resp = await fetch(`${API}/api/jobs/submit`, {
-//       method: 'POST',
-//       headers: {
-//         Authorization: `Bearer ${TOKEN}`,
-//         'Content-Type': 'application/json'
-//       },
-//       body: JSON.stringify(inputData.parametros)
-//     })
-//     if (!resp.ok) {
-//       throw new Error(`API retornou ${resp.status} ao submeter job`)
-//     }
-//     return resp.json()
-//   }
-// })
+export const submeterJob = createTool({
+  id: 'submeter-job',
+  description: 'Submete job de análise no cluster HPC',
+  inputSchema: z.object({
+    parametros: z.record(z.string(), z.unknown())
+  }),
+  execute: async (inputData) => {
+    const resp = await fetch(`${API}/api/jobs/submit`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(inputData)
+    })
+    if (!resp.ok) {
+      throw new Error(`API retornou ${resp.status} ao submeter job`)
+    }
+    return resp.json()
+  }
+})

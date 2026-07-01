@@ -26,19 +26,21 @@ const REDIRECT_URI = `http://localhost:${PORT}/callback`;
 const TOKEN_ENDPOINT = `${KEYCLOAK_INTERNAL_URL}/realms/${REALM}/protocol/openid-connect/token`;
 const AUTH_ENDPOINT = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
 
-// Catálogo estático de agentes disponíveis para delegação.
+// Registro de agentes conhecidos: apenas ID e URL interna.
+// Nome, descrição e scopes são descobertos via GET /agent-info de cada agente.
 const AGENTS = {
   'wgid-agent-v1': {
     id: 'wgid-agent-v1',
-    name: 'Assistente de Análise Genômica',
-    description:
-      'Agente de IA que auxilia pesquisadoras na análise de dados genômicos e submissão de jobs em clusters HPC.',
-    allowedScopes: ['genomica:read'],
-    blockedScopes: ['hpc:submit'],
+    internalUrl: AGENT_INTERNAL_URL,
   },
 };
 
-const DELEGATED_SCOPE = 'genomica:read';
+async function fetchAgentInfo(agentId) {
+  const agent = AGENTS[agentId];
+  if (!agent) return null;
+  const { data } = await axios.get(`${agent.internalUrl}/agent-info`);
+  return data;
+}
 
 function decodeJwt(token) {
   const [, payloadB64] = token.split('.');
@@ -59,8 +61,11 @@ app.use(
   })
 );
 
-app.get('/', (req, res) => {
-  res.render('index', { agents: Object.values(AGENTS) });
+app.get('/', async (req, res) => {
+  const agents = await Promise.all(
+    Object.keys(AGENTS).map(id => fetchAgentInfo(id).catch(() => null))
+  ).then(list => list.filter(Boolean));
+  res.render('index', { agents });
 });
 
 app.get('/login', (req, res) => {
@@ -93,24 +98,32 @@ app.get('/callback', async (req, res) => {
     );
 
     req.session.user_token = data.access_token;
-    res.redirect('/consent/wgid-agent-v1');
+    const agentId = req.session.pendingAgentId ?? 'wgid-agent-v1';
+    delete req.session.pendingAgentId;
+    res.redirect(`/consent/${agentId}`);
   } catch (err) {
     console.error('Erro ao trocar código por token:', err.response?.data || err.message);
     res.status(500).send('Falha ao autenticar com o Keycloak.');
   }
 });
 
-app.get('/consent/:agentId', (req, res) => {
+app.get('/consent/:agentId', async (req, res) => {
+  const { agentId } = req.params;
+  if (!AGENTS[agentId]) {
+    return res.status(404).send('Agente não encontrado.');
+  }
   if (!req.session.user_token) {
+    req.session.pendingAgentId = agentId;
     return res.redirect('/login');
   }
 
-  const agent = AGENTS[req.params.agentId];
-  if (!agent) {
-    return res.status(404).send('Agente não encontrado.');
+  try {
+    const agentInfo = await fetchAgentInfo(agentId);
+    res.render('consent', { agent: agentInfo, validityDays: 30 });
+  } catch (err) {
+    console.error('Erro ao buscar informações do agente:', err.message);
+    res.status(502).send('Não foi possível contactar o agente. Tente novamente.');
   }
-
-  res.render('consent', { agent, validityDays: 30 });
 });
 
 app.post('/authorize', async (req, res) => {
@@ -118,7 +131,20 @@ app.post('/authorize', async (req, res) => {
     return res.redirect('/login');
   }
 
+  const { agentId } = req.body;
+  if (!AGENTS[agentId]) {
+    return res.status(404).send('Agente não encontrado.');
+  }
+
   try {
+    const agentInfo = await fetchAgentInfo(agentId);
+    const validScopes = agentInfo.requestedScopes.map(s => s.name);
+    const selected = [].concat(req.body.scopes || []).filter(s => validScopes.includes(s));
+
+    if (selected.length === 0) {
+      return res.status(400).send('Selecione ao menos um escopo para delegar.');
+    }
+
     // 1. Obtém o token do agente (ator) via client_credentials.
     const agentTokenResponse = await axios.post(
       TOKEN_ENDPOINT,
@@ -133,8 +159,6 @@ app.post('/authorize', async (req, res) => {
 
     // 2. Token Exchange (RFC 8693): troca o token da pesquisadora (subject)
     //    pelo token delegado, usando o token do agente como actor.
-    console.log(req.session.user_token);
-    console.log(actorToken);
     const exchangeResponse = await axios.post(
       TOKEN_ENDPOINT,
       new URLSearchParams({
@@ -146,17 +170,18 @@ app.post('/authorize', async (req, res) => {
         requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
         client_id: AGENT_CLIENT_ID,
         client_secret: AGENT_CLIENT_SECRET,
-        scope: DELEGATED_SCOPE,
+        scope: selected.join(' '),
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
     const delegatedToken = exchangeResponse.data.access_token;
     req.session.delegated_token = delegatedToken;
+    req.session.delegated_agent_id = agentId;
 
     try {
       await axios.post(
-        `${AGENT_INTERNAL_URL}/token`,
+        `${AGENTS[agentId].internalUrl}/token`,
         { token: delegatedToken },
         { headers: { 'x-push-secret': PUSH_SECRET } }
       );
@@ -171,7 +196,7 @@ app.post('/authorize', async (req, res) => {
     // Quando o Keycloak suportar isso, o claim apareceria aqui em
     // `payload.act` (ex: { act: { sub: 'wgid-agent-v1' } }).
     res.render('success', {
-      agent: AGENTS['wgid-agent-v1'],
+      agent: agentInfo,
       payload,
       token: delegatedToken,
     });
@@ -181,15 +206,18 @@ app.post('/authorize', async (req, res) => {
   }
 });
 
-app.get('/delegations', (req, res) => {
+app.get('/delegations', async (req, res) => {
   if (!req.session.delegated_token) {
     return res.render('delegations', { delegation: null });
   }
 
   const payload = decodeJwt(req.session.delegated_token);
+  const agentId = req.session.delegated_agent_id ?? 'wgid-agent-v1';
+  const agentInfo = await fetchAgentInfo(agentId).catch(() => ({ name: agentId }));
+
   res.render('delegations', {
     delegation: {
-      agent: AGENTS['wgid-agent-v1'],
+      agent: agentInfo,
       scope: payload.scope,
       payload,
     },
@@ -198,6 +226,7 @@ app.get('/delegations', (req, res) => {
 
 app.post('/revoke', (req, res) => {
   delete req.session.delegated_token;
+  delete req.session.delegated_agent_id;
   res.redirect('/');
 });
 

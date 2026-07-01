@@ -30,6 +30,29 @@ export const mastra = new Mastra({
           return c.json({ ok: true });
         },
       },
+      {
+        path: '/agent-info',
+        method: 'GET',
+        handler: async (c: any) => {
+          return c.json({
+            id: 'wgid-agent-v1',
+            name: 'Assistente de Análise Genômica',
+            description: 'Agente de IA que auxilia pesquisadoras na análise de dados genômicos e submissão de jobs em clusters HPC.',
+            requestedScopes: [
+              {
+                name: 'genomica:read',
+                label: 'Leitura de sequências genômicas',
+                description: 'Permite buscar e ler dados de sequenciamento do repositório federado.',
+              },
+              {
+                name: 'hpc:submit',
+                label: 'Submissão de jobs HPC',
+                description: 'Permite submeter trabalhos de análise em clusters de alto desempenho.',
+              },
+            ],
+          });
+        },
+      },
     ],
   },
   workflows: { weatherWorkflow },
