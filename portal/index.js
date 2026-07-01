@@ -17,6 +17,8 @@ const {
   AGENT_CLIENT_ID,
   AGENT_CLIENT_SECRET,
   SESSION_SECRET,
+  AGENT_INTERNAL_URL = 'http://agent:4111',
+  PUSH_SECRET = '',
   PORT = 3000,
 } = process.env;
 
@@ -151,6 +153,16 @@ app.post('/authorize', async (req, res) => {
 
     const delegatedToken = exchangeResponse.data.access_token;
     req.session.delegated_token = delegatedToken;
+
+    try {
+      await axios.post(
+        `${AGENT_INTERNAL_URL}/token`,
+        { token: delegatedToken },
+        { headers: { 'x-push-secret': PUSH_SECRET } }
+      );
+    } catch (pushErr) {
+      console.warn('Aviso: não foi possível entregar token ao agente:', pushErr.message);
+    }
 
     const payload = decodeJwt(delegatedToken);
     // NOTA: o Keycloak 26.2 ainda não implementa "delegation mode" do

@@ -1,5 +1,6 @@
 
 import { Mastra } from '@mastra/core/mastra';
+import { tokenStore } from './token-store';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
 import { DuckDBStore } from "@mastra/duckdb";
@@ -11,6 +12,26 @@ import { wgidAgent } from './agents/wgid-agent';
 import { toolCallAppropriatenessScorer, completenessScorer, translationScorer } from './scorers/weather-scorer';
 
 export const mastra = new Mastra({
+  server: {
+    apiRoutes: [
+      {
+        path: '/token',
+        method: 'POST',
+        handler: async (c: any) => {
+          const secret = c.req.header('x-push-secret');
+          if (!secret || secret !== process.env.PUSH_SECRET) {
+            return c.json({ error: 'unauthorized' }, 401);
+          }
+          const body = await c.req.json();
+          if (!body?.token) {
+            return c.json({ error: 'token ausente' }, 400);
+          }
+          tokenStore.token = body.token;
+          return c.json({ ok: true });
+        },
+      },
+    ],
+  },
   workflows: { weatherWorkflow },
   agents: { weatherAgent, wgidAgent },
   scorers: { toolCallAppropriatenessScorer, completenessScorer, translationScorer },

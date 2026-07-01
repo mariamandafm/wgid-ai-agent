@@ -1,8 +1,8 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
+import { tokenStore } from '../token-store'
 
-const TOKEN = process.env.DELEGATED_TOKEN ?? ''
-const API   = process.env.API_SERVER_URL ?? 'http://api_server:3001'
+const API = process.env.API_SERVER_URL ?? 'http://api_server:3001'
 
 export const buscarSequencias = createTool({
   id: 'buscar-sequencias',
@@ -13,7 +13,7 @@ export const buscarSequencias = createTool({
   execute: async (inputData) => {
     const resp = await fetch(
       `${API}/api/datasets/${encodeURIComponent(inputData.dataset_id)}/sequences`,
-      { headers: { Authorization: `Bearer ${TOKEN}` } }
+      { headers: { Authorization: `Bearer ${tokenStore.token}` } }
     )
     if (!resp.ok) {
       throw new Error(`API retornou ${resp.status} ao buscar sequências`)
