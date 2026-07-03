@@ -39,36 +39,19 @@
 // contrato das funções).
 // =============================================================================
 
-import { createRemoteJWKSet, jwtVerify } from 'jose';
 import dotenv from 'dotenv';
 import { writeAuditLog } from './audit.js';
 
 dotenv.config();
 
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
-const REALM = process.env.REALM;
-
-// KEYCLOAK_URL é a URL pública do Keycloak — é ela que aparece no claim `iss`
-// dos tokens emitidos (definida por KC_HOSTNAME). Em Docker Compose, a busca
-// do JWKS precisa de uma URL alcançável dentro da rede interna (o nome do
-// serviço, ex. http://keycloak:8080), que normalmente difere da pública.
-// Por isso usamos KEYCLOAK_INTERNAL_URL (com fallback para KEYCLOAK_URL fora
-// do Docker) só para o fetch do JWKS, e KEYCLOAK_URL — a pública — para
-// validar o `iss`. Mesmo padrão já usado em portal/index.js.
 const KEYCLOAK_INTERNAL_URL = process.env.KEYCLOAK_INTERNAL_URL || KEYCLOAK_URL;
+const REALM = process.env.REALM;
+const API_CLIENT_ID = process.env.API_CLIENT_ID;
+const API_CLIENT_SECRET = process.env.API_CLIENT_SECRET;
 
-const JWKS_URI = `${KEYCLOAK_INTERNAL_URL}/realms/${REALM}/protocol/openid-connect/certs`;
-const ISSUER = `${KEYCLOAK_URL}/realms/${REALM}`;
-
-// jose's createRemoteJWKSet já faz cache interno das chaves, mas aplicamos
-// cooldown/cache explícito de 10 minutos para controlar a frequência de
-// requisições ao JWKS endpoint do Keycloak.
-const JWKS_CACHE_MS = 10 * 60 * 1000;
-
-const jwks = createRemoteJWKSet(new URL(JWKS_URI), {
-  cooldownDuration: JWKS_CACHE_MS,
-  cacheMaxAge: JWKS_CACHE_MS,
-});
+const INTROSPECT_ENDPOINT = `${KEYCLOAK_INTERNAL_URL}/realms/${REALM}/protocol/openid-connect/token/introspect`;
+const INTROSPECT_AUTH = 'Basic ' + Buffer.from(`${API_CLIENT_ID}:${API_CLIENT_SECRET}`).toString('base64');
 
 /**
  * Middleware Express que valida o JWT delegado e popula `req.auth`.
@@ -83,12 +66,24 @@ export async function verifyToken(req, res, next) {
 
   let payload;
   try {
-    const result = await jwtVerify(token, jwks, {
-      issuer: ISSUER,
+    const resp = await fetch(INTROSPECT_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': INTROSPECT_AUTH,
+      },
+      body: new URLSearchParams({ token }),
     });
-    payload = result.payload;
+    if (!resp.ok) {
+      throw new Error(`Introspection endpoint retornou ${resp.status}`);
+    }
+    const introspection = await resp.json();
+    if (!introspection.active) {
+      return res.status(401).json({ error: 'Token inválido, expirado ou revogado' });
+    }
+    payload = introspection;
   } catch (err) {
-    return res.status(401).json({ error: 'Token inválido ou expirado', detail: err.message });
+    return res.status(401).json({ error: 'Falha ao verificar token', detail: err.message });
   }
 
   const userId = payload.sub;

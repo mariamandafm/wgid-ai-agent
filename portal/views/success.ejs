@@ -82,13 +82,13 @@
       <pre><%= JSON.stringify(payload, null, 2) %></pre>
     </div>
 
-    <div class="note">
+    <!-- <div class="note">
       <strong>Observação:</strong> o Keycloak 26.2 ainda não implementa o
       "delegation mode" do RFC 8693, então este token não contém o claim
       <code>act</code> (que identificaria o agente como ator agindo em nome
       do subject). Quando o Keycloak suportar isso, o claim apareceria aqui
       como <code>act: { sub: "wgid-agent-v1" }</code>.
-    </div>
+    </div> -->
 
     <p><a class="btn" href="/delegations">Ver delegações ativas</a></p>
   </div>

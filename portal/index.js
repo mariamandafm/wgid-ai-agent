@@ -24,6 +24,7 @@ const {
 
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
 const TOKEN_ENDPOINT = `${KEYCLOAK_INTERNAL_URL}/realms/${REALM}/protocol/openid-connect/token`;
+const REVOKE_ENDPOINT = `${KEYCLOAK_INTERNAL_URL}/realms/${REALM}/protocol/openid-connect/revoke`;
 const AUTH_ENDPOINT = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
 
 // Registro de agentes conhecidos: apenas ID e URL interna.
@@ -171,6 +172,7 @@ app.post('/authorize', async (req, res) => {
         client_id: AGENT_CLIENT_ID,
         client_secret: AGENT_CLIENT_SECRET,
         scope: selected.join(' '),
+        audience: 'api-server',
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
@@ -224,7 +226,23 @@ app.get('/delegations', async (req, res) => {
   });
 });
 
-app.post('/revoke', (req, res) => {
+app.post('/revoke', async (req, res) => {
+  if (req.session.delegated_token) {
+    console.log('Revogando token delegado no Keycloak...');
+    try {
+      await axios.post(
+        REVOKE_ENDPOINT,
+        new URLSearchParams({
+          token: req.session.delegated_token,
+          client_id: AGENT_CLIENT_ID,
+          client_secret: AGENT_CLIENT_SECRET,
+        }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+    } catch (err) {
+      console.warn('Aviso: falha ao revogar token no Keycloak:', err.message);
+    }
+  }
   delete req.session.delegated_token;
   delete req.session.delegated_agent_id;
   res.redirect('/');
