@@ -1,0 +1,5 @@
+DATA_DIR=/satosa
+PROXY_PORT=443
+SATOSA_STATE_ENCRYPTION_KEY=<32+ bytes em base64>
+SATOSA_USER_ID_HASH_SALT=<32+ bytes em base64>
+METADATA_DIR=/satosa/metadata
