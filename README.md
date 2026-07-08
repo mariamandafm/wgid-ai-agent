@@ -394,13 +394,13 @@ docker compose restart satosa
 
 ### 5.1 Login no Portal
 
-Acesse `http://localhost:3000` e faça login. O portal mostra os agentes disponíveis, descobertos automaticamente a partir do endpoint `GET /agent-info` de cada agente — não há uma lista fixa de escopos configurada no portal.
+Acesse `http://localhost:3000` e faça login. O portal mostra os agentes disponíveis, descobertos automaticamente a partir do endpoint `GET /agent-info` de cada agente, não há uma lista fixa de escopos configurada no portal.
 
 Após o login (via Keycloak, opcionalmente federado com a CAFe através do SATOSA), você verá a tela de consentimento do agente `wgid-agent-v1`, com os escopos que ele solicita (`genomica:read`, `hpc:submit`) pré-selecionados. Você pode desmarcar escopos antes de confirmar.
 
 ### 5.2 Delegar acesso ao agente
 
-Ao confirmar o consentimento, o portal executa o Token Exchange (RFC 8693) com o Keycloak e entrega ao agente um token derivado da sua identidade, com os escopos escolhidos. A tela de sucesso mostra o payload decodificado do token delegado — repare que o `sub` é você (a pesquisadora), não o agente.
+Ao confirmar o consentimento, o portal executa o Token Exchange (RFC 8693) com o Keycloak e entrega ao agente um token derivado da sua identidade, com os escopos escolhidos. A tela de sucesso mostra o payload decodificado do token delegado, repare que o `sub` é você, não o agente.
 
 A partir desse momento o agente está autorizado a agir em seu nome, dentro dos limites definidos.
 
@@ -431,7 +431,7 @@ O agente (`agent/src/mastra/tools/wgid-tool.ts`) expõe duas ferramentas que sim
 | `buscar-sequencias` | `genomica:read` | Busca sequências genômicas de um dataset (`GET /api/datasets/:id/sequences`) |
 | `submeter-job` | `hpc:submit` | Submete um job de análise a um cluster HPC simulado, recebendo parâmetros livres como `threads` e `memoria` (`POST /api/jobs/submit`) |
 
-Ambas chamam a API Server usando o token armazenado em `tokenStore`, e cada chamada é auditada em `http://localhost:3001/audit`. Se você revogar a delegação (`http://localhost:3000/delegations` → "Revogar") e tentar usar o agente novamente, as chamadas passam a ser rejeitadas pela API — é o efeito da introspection detectando o token revogado a cada requisição.
+Ambas chamam a API Server usando o token armazenado em `tokenStore`, e cada chamada é auditada em `http://localhost:3001/audit`. Se você revogar a delegação (`http://localhost:3000/delegations` → "Revogar") e tentar usar o agente novamente, as chamadas passam a ser rejeitadas pela API, é o efeito da introspection detectando o token revogado a cada requisição.
 
 ---
 
