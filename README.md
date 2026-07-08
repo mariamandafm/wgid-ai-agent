@@ -10,10 +10,8 @@
 2. [Arquitetura](#2-arquitetura)
 3. [Pré-requisitos](#3-pré-requisitos)
 4. [Configuração do Ambiente](#4-configuração-do-ambiente)
-5. [Execução da Demonstração](#5-execução-da-demonstração)
-6. [Fluxo da Demonstração](#6-fluxo-da-demonstração)
-7. [Protocolos e Recomendações Adotados](#7-protocolos-e-recomendações-adotados)
-8. [Estrutura do Projeto](#8-estrutura-do-projeto)
+5. [Fluxo da Demonstração](#5-fluxo-da-demonstração)
+6. [Protocolos e Recomendações Adotados](#6-protocolos-e-recomendações-adotados)
 
 ---
 
@@ -25,7 +23,7 @@ Esta demonstração mostra como o gerenciamento de identidade de agentes de IA p
 
 O cenário central é: uma pesquisadora autenticada via federação CAFe autoriza um **agente de IA** a acessar dados científicos e submeter jobs em clusters HPC **em seu nome**, com escopos limitados e rastreabilidade completa.
 
-### 1.2 Problema que a PoC Resolve
+### 1.2 Problema que a Demonstração Resolve
 
 Agentes de IA precisam acessar recursos protegidos (APIs, dados, infraestrutura HPC) em nome de usuários reais. Sem um mecanismo de delegação padronizado, as alternativas comuns são inseguras:
 
@@ -47,7 +45,7 @@ Esta PoC demonstra que o **OAuth 2.0 Token Exchange (RFC 8693)** resolve esse pr
 | Agente de IA | Mastra v1.45.0 (TypeScript) |
 | API protegida | Node.js 22 + Express 4 |
 | Infraestrutura | Docker Compose |
-| **Protocolo de delegação** | **RFC 8693** — OAuth 2.0 Token Exchange |
+| Protocolo de delegação | RFC 8693 — OAuth 2.0 Token Exchange |
 | Verificação de revogação | RFC 7662 — OAuth 2.0 Token Introspection |
 | Revogação de tokens | RFC 7009 — OAuth 2.0 Token Revocation |
 | Autenticação federada | SAML 2.0 |
@@ -219,6 +217,10 @@ O agente utiliza o modelo `google/gemini-2.5-flash`. É necessária uma **Google
 
 ## 4. Configuração do Ambiente
 
+
+> [!WARNING]  
+> Os arquivos de configuração possuem chaves e tokens públicamente configurados apenas para agilizar a instalação da demonstração.
+
 ### 4.1 Obter o Código-Fonte
 
 ```bash
@@ -230,129 +232,104 @@ cd wgid
 
 Cada serviço possui seu próprio arquivo `.env`. **Nunca commite esses arquivos** — o `.gitignore` já os exclui.
 
-#### `portal/.env`
-
-```env
-# URL pública do Keycloak (usada para redirect do browser)
-KEYCLOAK_URL=http://localhost:8080
-
-# Realm configurado no Keycloak
-REALM=agents
-
-# Client do portal (Authorization Code Flow)
-PORTAL_CLIENT_ID=delegation-portal
-PORTAL_CLIENT_SECRET=<secret do client delegation-portal no Keycloak>
-
-# Client do agente (usado para Token Exchange)
-AGENT_CLIENT_ID=wgid-agent-v1
-AGENT_CLIENT_SECRET=<secret do client wgid-agent-v1 no Keycloak>
-
-# Segredo de sessão HTTP (qualquer string aleatória longa)
-SESSION_SECRET=<string-aleatoria-longa>
-
-# Porta do portal
-PORT=3000
-
-# URL interna do agente (dentro da rede Docker)
-AGENT_INTERNAL_URL=http://agent:4111
-
-# Segredo compartilhado entre portal e agente para push de token
-PUSH_SECRET=<string-aleatoria-longa>
+```bash
+cp api_server/.env.example api_server/.env
+cp agent/.env.example agent/.env
+cp satosa/.satosa_env.example satosa/.satosa_env
+cp portal/.env.example portal/.env
 ```
 
-#### `api_server/.env`
 
-```env
-# URL pública do Keycloak (para logs e exibição)
-KEYCLOAK_URL=http://localhost:8080
-
-# URL interna do Keycloak (para chamadas servidor-a-servidor)
-KEYCLOAK_INTERNAL_URL=http://keycloak:8080
-
-REALM=agents
-
-# Client confidencial da API (usado para Token Introspection)
-API_CLIENT_ID=api-server
-API_CLIENT_SECRET=<secret do client api-server no Keycloak>
-
-PORT=3001
-
-# Arquivo de audit log
-AUDIT_LOG_FILE=./audit.log
-```
-
-#### `agent/.env`
-
-```env
-# Google Gemini API Key
-GOOGLE_API_KEY=<sua-chave-google-gemini>
-
-# Segredo compartilhado com o portal para autenticar push de token
-PUSH_SECRET=<mesma-string-do-portal>
-
-# Token delegado inicial (fallback — sobrescrito pelo push do portal em runtime)
-DELEGATED_TOKEN=
-```
-
-#### `satosa/.satosa_env`
-
-```env
-DATA_DIR=/satosa
-PROXY_PORT=443
-SATOSA_STATE_ENCRYPTION_KEY=<32+ bytes em base64>
-SATOSA_USER_ID_HASH_SALT=<32+ bytes em base64>
-METADATA_DIR=/satosa/metadata
-```
-
-Para gerar os valores criptográficos do SATOSA:
+### 4.3 Inicializar os Serviços
 
 ```bash
-python3 -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
+# Primeira execução (ou após mudanças de código)
+docker compose up --build
+
+# Execuções subsequentes
+docker compose up -d
 ```
 
-### 4.3 Configurar o Keycloak
+### 4.4 Acessar os Serviços
 
-Acesse `http://localhost:8080` (após subir o Keycloak) com as credenciais `admin/admin` e configure:
+| Serviço | URL | Credenciais |
+|---|---|---|
+| Portal de Delegação | `http://localhost:3000` | — |
+| Keycloak Admin | `http://localhost:8080` | `admin` / `admin` |
+| Mastra Studio (dev) | `http://localhost:4111` | — |
+| API Server (health) | `http://localhost:3001/health` | — |
+| Audit Log | `http://localhost:3001/audit` | — |
 
-#### Realm
+---
 
-Crie um realm chamado **`agents`**.
+### 4.5 Configuração do Agente
+Em `agente/.env` é preciso informar as chaves geradas pelo Google Gemini API Key
+
+```
+# Google Gemini API Key
+GOOGLE_API_KEY=<sua-chave-google-gemini>
+```
+
+### 4.6 Configurar o Keycloak
+
+> Ao subir com `docker compose up`, o Keycloak importa
+> `keycloak/realm-import.json` no boot (`--import-realm`) e cria o realm, os 3
+> clients, os client scopes e os audience mappers descritos abaixo, nenhuma
+> configuração manual é necessária. Os secrets dos clients confidenciais já
+> vêm pré-preenchidos nos `.env.example` (`wgid-agent-v1-dev-secret` e
+> `api-server-dev-secret`), então `cp .env.example .env` já funciona sem
+> editar nada.
+
+Acesse `http://localhost:8080` (após subir o Keycloak) com as credenciais `admin/admin`.
+
+O Keycloak possui as seguintes configurações:
+
+#### Realms
+
+* `agents`
 
 #### Clients
 
-##### `delegation-portal` (portal)
-- Client authentication: **OFF** (public)
-- Standard flow: **ON**
-- Valid redirect URIs: `http://localhost:3000/callback`
+* `delegation-portal` (portal)
+  * Possui o `wgid-agent-v1` configurado como audience.
 
-##### `wgid-agent-v1` (agente)
-- Client authentication: **ON** (confidential)
-- Service accounts: **ON**
-- Standard Token Exchange: **ON** (em Keycloak 26.x: Advanced → Token exchange)
-- Client scopes → `wgid-agent-v1-dedicated` → Mappers → adicionar **Audience mapper**:
-  - Name: `api-server-audience`
-  - Included Client Audience: `api-server`
+* `wgid-agent-v1` (agente)
+  * Possui o Token Exchange habilitado e o `api-server` como audience.
 
-##### `api-server` (API)
-- Client authentication: **ON** (confidential)
-- Apenas para Token Introspection — não precisa de flows habilitados
+* `api-server` (API)
+  * Apenas para Token Introspection, não precisa de flows habilitados
 
 #### Scopes OAuth
-
-Crie os seguintes **Client Scopes** no realm `agents`:
 
 | Nome | Tipo |
 |---|---|
 | `genomica:read` | Optional |
 | `hpc:submit` | Optional |
 
-Adicione ambos como optional scopes do client `wgid-agent-v1`.
+Ambos são optional scopes do client `wgid-agent-v1`.
 
-<!-- #### Atributos Federados (SATOSA/CAFe)
+#### Integração com SATOSA
 
-Se integrado à CAFe via SATOSA, crie um **Identity Provider** SAML2 no realm `agents` apontando para a URL de metadados do SATOSA (`https://localhost:443/Saml2/metadata`). Configure mappers para propagar `eduPersonEntitlement` como claim no token. -->
+Para que o Keycloak aceite autenticação via SATOSA, é necessário cadastrar o SATOSA como Identity Provider no Keycloak e trocar os metadados SAML2 entre os dois.
 
-### 4.4 Configurar o SATOSA (Integração CAFe)
+**1. Criar o IdP no Keycloak**
+
+1. Baixe os metadados do IdP do SATOSA em `https://localhost/Saml2IDP/proxy.xml`.
+2. No Keycloak, acesse **Identity providers > SAML v2.0**.
+3. Preencha:
+   * **Display Name:** `Federação`
+   * Desabilite **Use entity descriptor**.
+4. Com a opção desabilitada, o campo **Import config from file** aparece — selecione o arquivo `proxy.xml` baixado no passo 1. Os demais campos do IdP são preenchidos automaticamente a partir do metadado.
+5. Marque **Want AuthnRequests signed**, **Want Assertions signed** e **Want Assertions encrypted**.
+6. Clique em **Add**.
+
+**2. Exportar os metadados do Keycloak para o SATOSA**
+
+1. Os metadados do Keycloak ficam disponíveis em `http://localhost:8080/realms/agents/broker/saml/endpoint/descriptor`.
+2. Baixe esse metadado e salve em `satosa/volumes/keycloak.xml`.
+
+
+### 4.7 Configurar o SATOSA (Integração CAFe)
 
 O SATOSA atua como SP perante o Shibboleth IdP da CAFe e como IdP perante o Keycloak.
 
@@ -368,62 +345,49 @@ satosa/volumes/
 └── metadata/                # Metadados SAML2 do IdP CAFe
 ```
 
+**1. Configurar os Plugins**
+
+* **Frontend (IdP):** já está configurado para ler o metadado local `keycloak.xml`, nenhuma alteração é necessária.
+* **Backend (SP):** o SATOSA se comunica com a federação, portanto é necessário estabelecer a relação de confiança com o servidor de descoberta da federação:
+
+  ```yaml
+  metadata:
+    remote:
+      - url: <url-servidor-descoberta-federação>
+  ```
+
+  Para uma configuração mais simples (sem depender do servidor de descoberta), coloque o metadado do IdP Shibboleth em `satosa/volumes/` e referencie-o localmente:
+
+  ```yaml
+  metadata:
+    local:
+      - idp-local.xml
+  ```
+
+> **Importante:** os metadados da interface SP do SATOSA também precisam ser enviados ao IdP/federação, para que a relação de confiança seja estabelecida nos dois sentidos.
+
+**2. Configurar os mappers no Keycloak**
+
+Em **Identity providers > Federação > Mappers > Add mapper**, crie um mapper de importação de atributo para cada atributo abaixo:
+
+| Name | Sync mode override | Mapper type | Friendly Name | User Attribute Name |
+|---|---|---|---|---|
+| Mail | Import | Attribute Importer | `mail` | `email` |
+| Name | Import | Attribute Importer | `givenName` | `firstName` |
+| LastName | Import | Attribute Importer | `sn` | `lastName` |
+
+**3. Reiniciar o SATOSA**
+
+```bash
+docker compose restart satosa
+```
+
 Para a PoC funcionar **sem** a CAFe, crie usuários diretamente no Keycloak (realm `agents`). O SATOSA só é necessário para autenticação com credenciais institucionais reais.
 
 ---
 
-## 5. Execução da Demonstração
 
-### 5.1 Inicializar os Serviços
-
-```bash
-# Primeira execução (ou após mudanças de código)
-docker compose up --build
-
-# Execuções subsequentes
-docker compose up -d
-```
-
-### 5.2 Ordem de Inicialização
-
-O Docker Compose gerencia as dependências automaticamente:
-
-```
-Keycloak → { Portal, API Server, Agent }
-SATOSA   → (independente, depende apenas de metadados locais)
-```
-
-O portal tem `depends_on: [keycloak, agent]` — aguarda ambos antes de iniciar.
-
-### 5.3 Verificar que os Serviços Estão no Ar
-
-```bash
-# Keycloak
-curl -s http://localhost:8080/realms/agents | jq .realm
-
-# API Server
-curl -s http://localhost:3001/health | jq .
-
-# Agente
-curl -s http://localhost:4111/agent-info | jq .
-
-# Portal (verificar no browser)
-open http://localhost:3000
-```
-
-### 5.4 Acessar os Serviços
-
-| Serviço | URL | Credenciais |
-|---|---|---|
-| Portal de Delegação | `http://localhost:3000` | — |
-| Keycloak Admin | `http://localhost:8080` | `admin` / `admin` |
-| Mastra Studio (dev) | `http://localhost:4111` | — |
-| API Server (health) | `http://localhost:3001/health` | — |
-| Audit Log | `http://localhost:3001/audit` | — |
-
----
-
-## 6. Fluxo da Demonstração
+## 5. Fluxo da Demonstração
 
 ### Etapa 1 — Descoberta do Agente
 
@@ -587,7 +551,7 @@ Resposta do Keycloak:
   "sub": "<uuid-da-pesquisadora>",
   "azp": "wgid-agent-v1",
   "scope": "genomica:read hpc:submit",
-  "preferred_username": "ana.silva@ufsc.br",
+  "preferred_username": "ana.silva@ufrn.br",
   "exp": 1751490000
 }
 ```
@@ -597,7 +561,7 @@ A API extrai `sub`, `azp`, `scope` e registra no audit log:
 ```json
 {
   "timestamp": "2026-07-02T14:23:01.000Z",
-  "user": "ana.silva@ufsc.br",
+  "user": "ana.silva@ufrn.br",
   "agent": "wgid-agent-v1",
   "is_delegated": true,
   "action": "buscar-sequencias",
@@ -629,7 +593,7 @@ O portal executa:
 
 ---
 
-## 7. Protocolos e Recomendações Adotados
+## 6. Protocolos e Recomendações Adotados
 
 ### RFC 8693 — OAuth 2.0 Token Exchange
 
@@ -638,103 +602,14 @@ O portal executa:
 **Como está implementado:**
 - `subject_token`: token da pesquisadora (obtido via Authorization Code Flow)
 - `actor_token`: token do agente (obtido via Client Credentials)
-- `audience: api-server`: restringe o token ao único recurso que pode usá-lo (RFC 8693, seção 2.1 — downscoping)
+- `audience: api-server`: restringe o token ao único recurso que pode usá-lo
 - `scope`: limitado aos escopos selecionados no consentimento
 
 **Limitação do Keycloak 26.x:** O `act` claim (que identificaria o agente no token, conforme seção 4.4 do RFC 8693) ainda não é emitido no Standard Token Exchange V2. O workaround adotado usa o claim `azp` (Authorized Party) para identificar o agente.
 
-### RFC 7662 — OAuth 2.0 Token Introspection
-
-**Por quê:** Permite que a API verifique o status atual do token no Keycloak a cada chamada, incluindo se foi revogado. Alternativa stateful à validação JWT local, que é stateless e ignora revogações.
-
-**Trade-off:**
-
-| | JWT Local | Token Introspection |
-|---|---|---|
-| Latência | ~0ms | +1 req de rede por chamada |
-| Respeita revogação | Não | Sim |
-| Keycloak offline | API funciona | API rejeita todos os tokens |
-
-### RFC 7009 — OAuth 2.0 Token Revocation
-
-**Por quê:** Padrão para comunicar ao servidor de autorização que um token não deve mais ser aceito.
-
-**Limitação:** No Keycloak 26.x Standard Token Exchange V2, access tokens de token exchange não são revogáveis via `/revoke` (retorna `invalid_token`). O protocolo funciona corretamente para refresh tokens e tokens de sessão regulares.
-
-### SAML 2.0 + SATOSA
-
-**Por quê:** A CAFe opera sobre SAML 2.0. O SATOSA atua como proxy de protocolo, permitindo que o Keycloak (que expõe OAuth 2.0/OIDC) consuma identidades da federação SAML2 sem modificar o IdP institucional.
-
-<!-- ### AARC-G069 — eduPersonEntitlement
-
-**Por quê:** Recomendação do AARC (Authentication and Authorisation for Research and Collaboration) para expressar permissões de acesso a recursos de pesquisa como URNs padronizadas no atributo `eduPersonEntitlement`. Permite autorização baseada em entitlements federados. -->
-
-<!-- **Mapeamento no SATOSA (`internal_attributes.yaml`):**
-```yaml
-eduPersonEntitlement:
-  saml: [eduPersonEntitlement, ePE]
-``` -->
 
 ### Princípio do Menor Privilégio
 
 Os escopos delegados ao agente são um **subconjunto** dos escopos da pesquisadora, selecionados explicitamente no consentimento. O token delegado nunca tem mais permissões do que o necessário para as tarefas do agente.
 
----
-
-## 8. Estrutura do Projeto
-
-```
-wgid/
-├── docker-compose.yml          # Orquestração de todos os serviços
-│
-├── portal/                     # Portal de delegação (Node.js + Express)
-│   ├── index.js                # Rotas: /, /login, /callback, /consent/:id,
-│   │                           #        /authorize, /delegations, /revoke
-│   ├── views/
-│   │   ├── index.ejs           # Lista de agentes disponíveis
-│   │   ├── consent.ejs         # Tela de consentimento com checkboxes de escopos
-│   │   ├── success.ejs         # Confirmação + payload decodificado do token
-│   │   └── delegations.ejs     # Gerenciamento de delegações ativas + revogação
-│   ├── package.json
-│   └── .env                    # Secrets (não commitar)
-│
-├── agent/                      # Agente de IA (TypeScript + Mastra)
-│   └── src/mastra/
-│       ├── index.ts            # Instância Mastra: agents, routes /token e /agent-info
-│       ├── token-store.ts      # Objeto mutável compartilhado: { token: string }
-│       ├── agents/
-│       │   └── wgid-agent.ts   # Agente com tools buscarSequencias + submeterJob
-│       └── tools/
-│           └── wgid-tool.ts    # Ferramentas que chamam a API com o token delegado
-│   ├── package.json
-│   └── .env                    # GOOGLE_API_KEY, PUSH_SECRET (não commitar)
-│
-├── api_server/                 # API protegida (Node.js + Express)
-│   ├── index.js                # Rotas: /health, /audit, /api/datasets/*, /api/jobs/*
-│   ├── auth.js                 # Middleware verifyToken (introspection) + requireScope
-│   ├── audit.js                # Gravação e leitura do audit log (JSONL)
-│   ├── tools.js                # Handlers: buscarSequencias, submeterJob, exportarDados
-│   ├── package.json
-│   └── .env                    # API_CLIENT_SECRET, KEYCLOAK_INTERNAL_URL (não commitar)
-│
-└── satosa/                     # Proxy SAML2 (Python + SATOSA)
-    ├── .gitignore              # Exclui .satosa_env e chaves TLS
-    ├── .satosa_env             # SATOSA_STATE_ENCRYPTION_KEY, SALT (não commitar)
-    └── volumes/
-        ├── proxy_conf.yaml         # Configuração principal (BASE URL, plugins)
-        ├── internal_attributes.yaml # Mapeamento de atributos (inclui eduPersonEntitlement)
-        └── plugins/
-            ├── backends/saml2_backend.yaml   # SP perante o IdP CAFe
-            └── frontends/saml2_frontend.yaml # IdP virtual perante o Keycloak
-```
-
-### Arquivos Sensíveis (nunca commitar)
-
-```
-portal/.env
-api_server/.env
-agent/.env
-satosa/.satosa_env
-satosa/volumes/https.key
-```
 
