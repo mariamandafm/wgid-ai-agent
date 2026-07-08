@@ -33,7 +33,7 @@ Agentes de IA precisam acessar recursos protegidos (APIs, dados, infraestrutura 
 | Criar credenciais técnicas separadas para o agente | O agente age em nome próprio, não do usuário — sem identidade delegada |
 | Copiar e colar tokens manualmente | Operacionalmente inviável; sem revogação |
 
-Esta PoC demonstra que o **OAuth 2.0 Token Exchange (RFC 8693)** resolve esse problema: o agente recebe um token derivado das credenciais do usuário, com escopos reduzidos, rastreável e revogável, sem que o usuário precise compartilhar sua senha ou token primário.
+Esta solução demonstra que o **OAuth 2.0 Token Exchange (RFC 8693)** resolve esse problema: o agente recebe um token derivado das credenciais do usuário, com escopos reduzidos, rastreável e revogável, sem que o usuário precise compartilhar sua senha ou token primário.
 
 ### 1.3 Tecnologias e Protocolos
 
