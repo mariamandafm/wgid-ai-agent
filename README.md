@@ -322,8 +322,18 @@ Para que o Keycloak aceite autenticação via SATOSA, é necessário cadastrar o
 4. Com a opção desabilitada, o campo **Import config from file** aparece — selecione o arquivo `proxy.xml` baixado no passo 1. Os demais campos do IdP são preenchidos automaticamente a partir do metadado.
 5. Marque **Want AuthnRequests signed**, **Want Assertions signed** e **Want Assertions encrypted**.
 6. Clique em **Add**.
+   
+**2. Configurar os mappers no Keycloak**
 
-**2. Exportar os metadados do Keycloak para o SATOSA**
+Em **Identity providers > Federação > Mappers > Add mapper**, crie um mapper de importação de atributo para cada atributo abaixo:
+
+| Name | Sync mode override | Mapper type | Friendly Name | User Attribute Name |
+|---|---|---|---|---|
+| Mail | Import | Attribute Importer | `mail` | `email` |
+| Name | Import | Attribute Importer | `givenName` | `firstName` |
+| LastName | Import | Attribute Importer | `sn` | `lastName` |
+
+**3. Exportar os metadados do Keycloak para o SATOSA**
 
 1. Os metadados do Keycloak ficam disponíveis em `http://localhost:8080/realms/agents/broker/saml/endpoint/descriptor`.
 2. Baixe esse metadado e salve em `satosa/volumes/keycloak.xml`.
@@ -364,26 +374,17 @@ satosa/volumes/
       - idp-local.xml
   ```
 
-> **Importante:** os metadados da interface SP do SATOSA também precisam ser enviados ao IdP/federação, para que a relação de confiança seja estabelecida nos dois sentidos.
+> [!IMPORTANT]
+> Os metadados da interface SP do SATOSA também precisam ser enviados ao IdP/federação, para que a relação de confiança seja estabelecida nos dois sentidos.
+> Esses metadados são disponibilizados em: https://localhost/Saml2/proxy_saml2_backend.xml
 
-**2. Configurar os mappers no Keycloak**
-
-Em **Identity providers > Federação > Mappers > Add mapper**, crie um mapper de importação de atributo para cada atributo abaixo:
-
-| Name | Sync mode override | Mapper type | Friendly Name | User Attribute Name |
-|---|---|---|---|---|
-| Mail | Import | Attribute Importer | `mail` | `email` |
-| Name | Import | Attribute Importer | `givenName` | `firstName` |
-| LastName | Import | Attribute Importer | `sn` | `lastName` |
-
-**3. Reiniciar o SATOSA**
+**2. Reiniciar o SATOSA**
 
 ```bash
 docker compose restart satosa
 ```
 
 Para a PoC funcionar **sem** a CAFe, crie usuários diretamente no Keycloak (realm `agents`). O SATOSA só é necessário para autenticação com credenciais institucionais reais.
-
 ---
 
 
