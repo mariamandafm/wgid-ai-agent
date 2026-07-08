@@ -383,8 +383,8 @@ satosa/volumes/
 ```bash
 docker compose restart satosa
 ```
-
-Para a PoC funcionar **sem** a CAFe, crie usuários diretamente no Keycloak (realm `agents`). O SATOSA só é necessário para autenticação com credenciais institucionais reais.
+> [!TIP]
+> Para a PoC funcionar **sem** a CAFe, crie usuários diretamente no Keycloak (realm `agents`). O SATOSA só é necessário para autenticação com credenciais institucionais reais.
 ---
 
 
